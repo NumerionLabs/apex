@@ -1,0 +1,38 @@
+encoder:
+  embed_dim: 64
+  mpnn_params:
+    node_dim: 64
+    edge_dim: 64
+    graph_dim: 64
+    hidden_dim: 64
+    num_layers: 4
+
+factorizer:
+  embed_dim: 64
+  associative_dim: 64
+  hidden_dim: 64
+  num_layers: 4
+  mpnn_params:
+    node_dim: 64
+    edge_dim: 64
+    graph_dim: 64
+    hidden_dim: 64
+    num_layers: 4
+
+train_surrogate:
+  batch_size: 200
+  max_iterations: 50000
+  logging_iterations: 250
+  checkpoint_iterations: 1000
+  optimizer_name: Adam
+  optimizer_kwargs:
+    lr: 0.001
+
+train_apex:
+  batch_num_products_per_reaction: 300
+  batch_num_reactions: 1
+  max_iterations: 100000
+  logging_iterations: 250
+  optimizer_name: Adam
+  optimizer_kwargs:
+    lr: 0.0001
