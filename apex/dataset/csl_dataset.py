@@ -30,7 +30,7 @@ class CSLDataset(Dataset):
         self,
         reaction_df: pd.DataFrame,
         synthon_df: pd.DataFrame,
-        fast_smiles: bool = False,
+        fast_smiles: bool = True,
         synthon_torch_mol: bool = True,
         load_synthons_and_reactions: bool = False,
     ):
@@ -39,10 +39,13 @@ class CSLDataset(Dataset):
         Args:
             reaction_df: Dataframe with reaction SMARTS
             synthon_df: Dataframe with synthon SMILES
-            synthon_torch_mol: Whether the __getitem__ should return synthons as
-              TorchMol objects
+            fast_smiles: Whether to use string-based construction of product
+              SMILES
+            synthon_torch_mol: Whether the __getitem__ should include synthons
+              as TorchMol objects
             load_synthons_and_reactions: Whether to load the synthons and
-              reactions with RDKit, used for speeding up methods like key2smiles
+              reactions with RDKit, primarily used for speeding up methods like
+              key2smiles when fast_smiles is False
         """
         # Copy dataframes
         self._orig_reaction_df = reaction_df
@@ -62,7 +65,6 @@ class CSLDataset(Dataset):
         # Map the original reaction_ids to the internal normalized reaction_ids
         # (which is like range(n_reactions))
         reaction_df["orig_reaction_id"] = reaction_df["reaction_id"]
-        reaction_df["reaction_smarts"] = reaction_df["Reaction"]
         orig_reaction_mapper = {
             name: i for i, name in enumerate(reaction_df["reaction_id"])
         }
@@ -72,22 +74,20 @@ class CSLDataset(Dataset):
 
         # Map the original synthon_ids to the internal normalized synthon_ids
         # (which is like range(n_synthons))
-        synthon_df["orig_synthon_id"] = synthon_df["synton_id"]
-        synthon_df["synthon_smiles"] = synthon_df["SMILES"]
+        synthon_df["orig_synthon_id"] = synthon_df["synthon_id"]
         synthon_mapper = {
             smi: i
             for i, smi in enumerate(
-                sorted(synthon_df["synthon_smiles"].unique())
+                sorted(synthon_df["smiles"].unique())
             )
         }
-        synthon_df["synthon_id"] = synthon_df["synthon_smiles"].apply(
+        synthon_df["synthon_id"] = synthon_df["smiles"].apply(
             lambda x: synthon_mapper[x]
         )
         synthon_df["orig_reaction_id"] = synthon_df["reaction_id"]
         synthon_df["reaction_id"] = synthon_df["orig_reaction_id"].apply(
             lambda x: orig_reaction_mapper[x]
         )
-        synthon_df["synton#"] = synthon_df["synton#"] - 1
 
         # Form dicts for mapping internal reaction/synthon IDs to originals
         self._orig_reaction_id_lookup = {
@@ -111,14 +111,14 @@ class CSLDataset(Dataset):
         # the subsequent level corresponding to the reaction R-groups, and the
         # leaves are the normalized synthon_ids (ints) for the synthons
         # contained in the given R-group
-        libtree = synthon_df[["reaction_id", "synton#", "synthon_id"]]
+        libtree = synthon_df[["reaction_id", "rgroup", "synthon_id"]]
         libtree = libtree.drop_duplicates()
         libtree = libtree.sort_values(
-            by=["reaction_id", "synton#", "synthon_id"]
+            by=["reaction_id", "rgroup", "synthon_id"]
         ).reset_index(drop=True)
         libtree = libtree.groupby("reaction_id")
         libtree = libtree.apply(
-            lambda x: x.groupby("synton#").apply(
+            lambda x: x.groupby("rgroup").apply(
                 lambda x: x["synthon_id"].tolist()
             )
         ).T
@@ -130,7 +130,7 @@ class CSLDataset(Dataset):
             set(orig_reaction_mapper.keys())
         )
         tmp = synthon_df[
-            ["orig_synthon_id", "synthon_smiles"]
+            ["orig_synthon_id", "smiles"]
         ].drop_duplicates()
         assert len(tmp.orig_synthon_id.unique()) == len(tmp)
         orig_synthon_mapper = {
@@ -140,14 +140,13 @@ class CSLDataset(Dataset):
 
         # Retain only specific columns
         reaction_df = reaction_df[
-            ["reaction_id", "orig_reaction_id", "reaction_smarts"]
+            ["reaction_id", "orig_reaction_id", "smarts"]
         ].sort_values(by="reaction_id")
         synthon_df = synthon_df[
-            ["synthon_id", "orig_synthon_id", "synthon_smiles"]
+            ["synthon_id", "orig_synthon_id", "smiles"]
         ].sort_values(by="synthon_id")
 
-        # Create a bunch of attributes that will be utilized by CSLDataset's
-        # methods
+        # Create a bunch of attributes
         self.reaction_df: pd.DataFrame = (
             reaction_df.drop_duplicates().reset_index(drop=True)
         )
@@ -156,13 +155,13 @@ class CSLDataset(Dataset):
         )
         self.libtree: list[list[list[int]]] = libtree
         self.reaction_smarts: list[str] = (
-            self.reaction_df[["reaction_id", "reaction_smarts"]]
-            .drop_duplicates()["reaction_smarts"]
+            self.reaction_df[["reaction_id", "smarts"]]
+            .drop_duplicates()["smarts"]
             .tolist()
         )
         self.synthon_smiles: list[str] = (
-            self.synthon_df[["synthon_id", "synthon_smiles"]]
-            .drop_duplicates()["synthon_smiles"]
+            self.synthon_df[["synthon_id", "smiles"]]
+            .drop_duplicates()["smiles"]
             .tolist()
         )
         self.sticky_synthon_smiles: list[str] = [
@@ -584,9 +583,6 @@ class CSLDataset(Dataset):
                         self_.dataset.get_product_ids_by_reaction_id(i)
                         for i in reaction_ids
                     ]
-                    # fn = lambda rng: np.random.randint(
-                    #     rng.start, rng.stop, (self.num_products_per_reaction,)
-                    # ).tolist()
                     indexes = flatten_list(
                         [self_.random_sample(rng) for rng in ranges]
                     )

@@ -15,12 +15,14 @@ from torch.utils.tensorboard import SummaryWriter
 # Atomwise
 from apex import topk
 from apex.dataset.csl_dataset import CSLDataset
-from apex.dataset.smiles_dataset import SmilesDataset
+from apex.dataset.labeled_smiles_dataset import LabeledSmilesDataset
 from apex.nn.encoder import LigandEncoder
 from apex.nn.mlp import ResNetMLP
 from apex.nn.probe import LinearProbe
 from apex.utils.torch_utils import build_library_indexes
 from apex.nn.scatter import Scatter
+
+DEFAULT_CHUNK_SIZE: int = 2**30
 
 logger = logging.getLogger(__name__)
 
@@ -191,6 +193,14 @@ class APEXFactorizedCSL(nn.Module):
                 make_zeros(self.dataset.num_reactions, self.embed_dim) / 0,
             ),
         ]
+        if self.probe is not None:
+            library_tensors.append(
+                (
+                    "synthon_associative_contribs",
+                    make_zeros(num_asynthon, probe.output_dim) / 0,
+                )
+            )
+
         self.library_tensors = nn.ParameterDict(
             {
                 k: nn.Parameter(v, requires_grad=False)
@@ -210,6 +220,7 @@ class APEXFactorizedCSL(nn.Module):
             tuple(idx.tolist()): i
             for i, idx in enumerate(self.library_indexes.synthon2rgroup.T)
         }
+        self.apex_libtree = self.build_apex_libtree()
 
     @property
     def encoder(self):
@@ -295,8 +306,32 @@ class APEXFactorizedCSL(nn.Module):
 
         return torch.cat(synthon_associative_embeds, 0)
 
+    def calculate_synthon_associative_contribs(self, library_tensors):
+        scaled_weight = self.probe.weight.T / self.probe.output_scale
+        synthon_associative_embeds = library_tensors[
+            "synthon_associative_embeds"
+        ]
+        synthon_associative_contribs = (
+            synthon_associative_embeds @ scaled_weight
+        )
+        return synthon_associative_contribs
+
+    def build_apex_libtree(self) -> list[list[list[int]]]:
+        shifts = self.library_indexes.first_rgroup_by_reaction
+        library_tree = []
+        for reaction_id, rgroup_synthon_ids in enumerate(self.dataset.libtree):
+            library_tree.append([])
+            for rgroup_id, synthon_ids in enumerate(rgroup_synthon_ids):
+                library_tree[reaction_id].append([])
+                for synthon_id in synthon_ids:
+                    key = (synthon_id, rgroup_id + shifts[reaction_id].item())
+                    idx = self.asynthon_mapper[key]
+                    library_tree[reaction_id][rgroup_id].append(idx)
+        return library_tree
+
+
     @torch.no_grad()
-    def run_search(
+    def run_apex_search(
         self,
         k: int,
         objective: str,
@@ -305,6 +340,7 @@ class APEXFactorizedCSL(nn.Module):
         ] = None,
         probe: Optional[LinearProbe] = None,
         maximize: bool = True,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
     ) -> pd.DataFrame:
         """
         This is the primary method in APEX, used to conduct a search of the
@@ -322,7 +358,9 @@ class APEXFactorizedCSL(nn.Module):
         # Setup
         device = next(self.parameters()).device
         self.to(device)
+        default_probe = False
         if probe is None:
+            default_probe = True
             assert isinstance(self.probe, LinearProbe)
             probe = self.probe
         probe = probe.to(device)
@@ -335,10 +373,10 @@ class APEXFactorizedCSL(nn.Module):
 
         # Process constraints
         constraints = dict({} if constraints is None else constraints)
+        endpt_indexes = []
         if len(constraints) > 0:
             constr_lower = []
             constr_upper = []
-            constr_weights = []
             for i, (name, (lb, ub)) in enumerate(constraints.items()):
                 assert name in probe.output_names
                 constr_idx = probe.name_to_idx[name]
@@ -351,12 +389,9 @@ class APEXFactorizedCSL(nn.Module):
                 scale = probe.output_scale[constr_idx].item()
                 constr_lower.append((lb - bias) / scale)
                 constr_upper.append((ub - bias) / scale)
-                constr_weights.append(
-                    probe.weight.T[:, constr_idx : constr_idx + 1] / scale
-                )
+                endpt_indexes.append(constr_idx)
 
             # Get weights, bounds, and indexes as tensors
-            constr_weights = torch.cat(constr_weights, 1)
             constr_bounds = torch.tensor(
                 [constr_lower, constr_upper],
                 device=device,
@@ -372,45 +407,44 @@ class APEXFactorizedCSL(nn.Module):
         # Get objective weights and bias
         obj_sign = 2 * maximize - 1
         obj_idx = probe.name_to_idx[objective]
-        obj_weight = obj_sign * probe.weight.T[:, obj_idx : obj_idx + 1]
         obj_bias = obj_sign * probe.bias[obj_idx].item()
         obj_index = torch.tensor([len(constraints)], device=device)
+        endpt_indexes.append(obj_idx)
 
         # Combine constraint and objective weights
-        if len(constraints) > 0:
-            weights = torch.cat([constr_weights, obj_weight], 1)
+        if default_probe:
+            synthon_associative_contribs = (
+                self.library_tensors.synthon_associative_contribs[
+                    :, endpt_indexes
+                ]
+            )
         else:
-            weights = obj_weight
-
-        # Calculate contributions
-        synthon_associative_contribs = (
-            self.library_tensors.synthon_associative_embeds @ weights
+            scaled_weight = (
+                probe.weight[endpt_indexes].T
+                / probe.output_scale[endpt_indexes]
+            )
+            synthon_associative_contribs = (
+                self.library_tensors.synthon_associative_embeds @ scaled_weight
+            )
+        synthon_associative_contribs[:, -1] *= (
+            obj_sign * probe.output_scale[obj_idx].item()
         )
-
-        # Construct library tree
-        shifts = self.library_indexes.first_rgroup_by_reaction
-        library_tree = []
-        for reaction_id, rgroup_synthon_ids in enumerate(self.dataset.libtree):
-            library_tree.append([])
-            for rgroup_id, synthon_ids in enumerate(rgroup_synthon_ids):
-                library_tree[reaction_id].append([])
-                for synthon_id in synthon_ids:
-                    key = (synthon_id, rgroup_id + shifts[reaction_id].item())
-                    idx = self.asynthon_mapper[key]
-                    library_tree[reaction_id][rgroup_id].append(idx)
 
         # Get topk predictions
         (apex_values, indexes) = topk(
             contributions=synthon_associative_contribs,
-            library_tree=library_tree,
+            library_tree=self.apex_libtree,
             topk=k,
             objective_indices=obj_index,
             constraint_indices=constr_indexes,
             constraint_bounds=constr_bounds,
+            default_chunk_size=chunk_size,
         )
         (apex_constr_values, apex_obj_values) = apex_values.T
         apex_obj_values.add_(obj_bias)
         apex_obj_values.mul_(obj_sign)
+        apex_constr_values = apex_constr_values.tolist()
+        apex_obj_values = apex_obj_values.tolist()
 
         # Convert indexes to reaction and synthon IDs
         top_reaction_ids = indexes[:, 0].tolist()
@@ -444,8 +478,8 @@ class APEXFactorizedCSL(nn.Module):
             smiles_list.append(
                 self.dataset.key2smiles(reaction_id, synthon_ids)
             )
-            apex_obj_value_list.append(apex_obj_values[i].item())
-            apex_constr_value_list.append(apex_constr_values[i].item())
+            apex_obj_value_list.append(apex_obj_values[i])
+            apex_constr_value_list.append(apex_constr_values[i])
 
         times += [time.time()]
         mins_elapsed = (times[-1] - times[-2]) / 60.0
@@ -466,7 +500,7 @@ class APEXFactorizedCSL(nn.Module):
 
         mins_elapsed = (time.time() - times[0]) / 60.0
         logger.info(
-            f"Returning dataframe with top {k:,} products. Total elapsed "
+            f"Returning Compounds1D with top {k:,} products. Total elapsed "
             f"time: {mins_elapsed:.2f} minutes."
         )
 
@@ -534,7 +568,7 @@ class APEXFactorizedCSL(nn.Module):
 
         smiles = self.dataset.get_synthons_smiles()
         embeds = []
-        dataset = SmilesDataset(smiles)
+        dataset = LabeledSmilesDataset(pd.DataFrame({"smiles": smiles}))
         dataloader = torch.utils.data.DataLoader(
             dataset=dataset,
             batch_size=batch_size,

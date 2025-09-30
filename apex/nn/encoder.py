@@ -1,8 +1,4 @@
-# Standard
-from typing import Optional
-
 # Third party
-from rdkit import Chem
 import torch
 from torch import nn, Tensor
 

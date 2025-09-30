@@ -12,13 +12,14 @@ Saves outputs to $OUTPUT_DIR:
 - Probe weights: ${OUTPUT_DIR}/checkpoints/probe_${ITERATION}.pt
 - Tensorboard events file
 
-train_apex \\
-  --config atomwise/cslvae/configs/apex.yaml \\
-  --train_df_path $TRAIN_DF_PATH \\
-  --val_df_path $VAL_DF_PATH \\
-  --property_columns mol_wt logp score_log_s score_log_d score_mg score_his ... \\
-  --output_dir $OUTPUT_DIR \\
-  --run_id $RUN_ID
+train_surrogate \\
+--config atomwise/cslvae/configs/apex.yaml \\
+--parquet_path $PARQUET_PATH \\
+--training_folds 0 \\
+--validation_folds 1 \\
+--property_columns mol_wt logp n_hba n_hbd score_met ... \\
+--output_dir $OUTPUT_DIR \\
+--run_id $RUN_ID
 """
 
 # Standard
@@ -31,7 +32,7 @@ from typing import Optional
 import uuid
 
 # Third party
-import pandas as pd
+import duckdb
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import yaml
@@ -61,18 +62,28 @@ def parse_arguments():
         help="Path to YAML file specifying the configuration.",
     )
     parser.add_argument(
-        "--train_df_path",
+        "--parquet_path",
         type=str,
         action="store",
         required=True,
-        help="Path to training dataframe for fitting the LBM surrogate.",
+        help="Path to dataframe for fitting the LBM surrogate. It should have a"
+        "categorical column named 'fold' indicating the fold a row belongs to.",
     )
     parser.add_argument(
-        "--val_df_path",
+        "--training_folds",
         type=str,
         action="store",
+        nargs="+",
         required=True,
-        help="Path to validation dataframe for fitting the LBM surrogate.",
+        help="List of training fold indexes.",
+    )
+    parser.add_argument(
+        "--validation_folds",
+        type=str,
+        action="store",
+        nargs="+",
+        required=True,
+        help="List of validation fold indexes.",
     )
     parser.add_argument(
         "--property_columns",
@@ -137,7 +148,8 @@ def train(
     outdir: str,
 ):
     # Create checkpoints directory
-    makedirs(os.path.join(outdir, "checkpoints"))
+    checkpoints_path = os.path.join(outdir, "checkpoints")
+    makedirs(checkpoints_path)
 
     # Instantiate probe
     device = next(encoder.parameters()).device
@@ -152,7 +164,7 @@ def train(
     batch_size = int(config.get("batch_size"))
     max_iterations = int(config.get("max_iterations"))
     logging_iterations = int(config.get("logging_iterations", 100))
-    checkpoint_iterations = int(config.get("checkpoint_iterations", 0))
+    checkpoint_iterations = int(config.get("checkpoint_iterations", 1000))
     noise_scale = float(config.get("noise_scale", 1.0))
 
     # Instantiate writer
@@ -264,28 +276,27 @@ def train(
                 iteration == max_iterations
             ):
                 logging.info(f"Check-pointing model iteration {iteration}.")
-                encoder_path = os.path.join(
-                    outdir, "checkpoints", f"encoder_{iteration}.pt"
+                encoder.save(
+                    os.path.join(checkpoints_path, f"encoder_{iteration}.pt")
                 )
-                encoder.save(encoder_path)
-                probe_path = os.path.join(
-                    outdir, "checkpoints", f"probe_{iteration}.pt"
+                encoder.save(os.path.join(checkpoints_path, "encoder.pt"))
+                probe.save(
+                    os.path.join(checkpoints_path, f"probe_{iteration}.pt")
                 )
-                probe.save(probe_path)
+                probe.save(os.path.join(checkpoints_path, "probe.pt"))
 
         if iteration == max_iterations:
             logging.info(f"Maximum iterations ({max_iterations}) reached.")
             break
 
-    encoder.save(os.path.join(outdir, "checkpoints", "encoder_final.pt"))
-    probe.save(os.path.join(outdir, "checkpoints", "probe_final.pt"))
     writer.close()
 
 
 def main(
     config: str,
-    train_df_path: str,
-    val_df_path: str,
+    parquet_path: str,
+    training_folds: list[str],
+    validation_folds: list[str],
     property_columns: list[str],
     encoder_weights_path: Optional[str] = None,
     probe_weights_path: Optional[str] = None,
@@ -326,8 +337,14 @@ def main(
     device = "cuda:0" if torch.cuda.device_count() > 0 else "cpu"
 
     # Load the train and validation datasets
-    train_df = pd.read_csv(train_df_path)
-    val_df = pd.read_csv(val_df_path)
+    con = duckdb.connect()
+    query = f"SELECT {smiles_column},{','.join(property_columns)} "
+    query += f"FROM '{parquet_path}' WHERE "
+    train_df = con.execute(query + f"fold IN ({','.join(training_folds)})").df()
+    val_df = con.execute(query + f"fold IN ({','.join(validation_folds)})").df()
+
+    # train_df = pd.read_csv(train_df_path)
+    # val_df = pd.read_csv(val_df_path)
     train_dataset = LabeledSmilesDataset(
         df=train_df,
         property_columns=property_columns,
@@ -379,8 +396,9 @@ if __name__ == "__main__":
     args = parse_arguments()
     main(
         args.config,
-        args.train_df_path,
-        args.val_df_path,
+        args.parquet_path,
+        args.training_folds,
+        args.validation_folds,
         args.property_columns,
         args.encoder_weights_path,
         args.probe_weights_path,

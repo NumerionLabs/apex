@@ -1,6 +1,6 @@
 # Standard
 import errno
-import gzip
+import logging
 import os
 import os.path as osp
 from typing import Any

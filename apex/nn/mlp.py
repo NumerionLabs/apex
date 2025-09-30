@@ -1,5 +1,5 @@
 # Standard
-from typing import List, Optional
+from typing import Optional
 
 # Third party
 from torch import nn, Tensor
@@ -10,7 +10,7 @@ class MultiLayerPerceptron(nn.Module):
         self,
         input_dim: int,
         output_dim: int,
-        hidden_dims: Optional[List[int]] = None,
+        hidden_dims: Optional[list[int]] = None,
         normalization: bool = True,
         activation: type = nn.GELU,
     ):
