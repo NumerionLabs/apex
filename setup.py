@@ -1,8 +1,5 @@
-# Standard
-# import os
-from setuptools import setup, find_packages
-
-os.environ.setdefault("TORCH_CUDA_ARCH_LIST", "7.5 8.6")
+# Third party
+from setuptools import find_packages, setup
 
 with open("requirements.txt") as f:
     install_requires = f.read().splitlines()
