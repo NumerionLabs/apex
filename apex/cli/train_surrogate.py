@@ -1,25 +1,35 @@
 #!/usr/bin/env python
 """
-This script trains an LBM surrogate that is adaptable to APEX factorization. The
-surrogate is decomposed into an encoder and a (linear) probe. The training setup
-is multi-task regression, and we use deep-fried least squares for training the
-probe.
+This script trains a surrogate model on labeled data that it is amenable to APEX
+factorization. The surrogate is decomposed into an encoder and (linear) probes.
 
-Saves outputs to $OUTPUT_DIR:
-- Config: ${OUTPUT_DIR}/config.yaml
-- Logs: ${OUTPUT_DIR}/logs.log
-- Encoder weights: ${OUTPUT_DIR}/checkpoints/encoder_${ITERATION}.pt
-- Probe weights: ${OUTPUT_DIR}/checkpoints/probe_${ITERATION}.pt
-- Tensorboard events file
-
-train_surrogate \\
---config configs/apex.yaml \\
---parquet_path $PARQUET_PATH \\
---training_folds 0 \\
---validation_folds 1 \\
---property_columns mol_wt logp n_hba n_hbd score_met ... \\
---output_dir $OUTPUT_DIR \\
+Surrogate training can be executed as follows:
+```
+train_surrogate \
+--config configs/apex.yaml \
+--parquet_path $PARQUET_PATH \
+--training_folds 0 \
+--validation_folds 1 \
+--property_columns mol_wt logp n_hba n_hbd score_met ... \
+--output_dir $OUTPUT_DIR \
 --run_id $RUN_ID
+```
+
+Outputs are saved as follows:
+```
+$OUTPUT_DIR/
+└── $RUN_ID/
+    ├── config.yaml               (Provided config)
+    ├── logs.log                  (Log statements)
+    ├── checkpoints/
+    │   ├── encoder.pt            (Latest or final encoder weights)
+    │   ├── encoder_0.pt          (Checkpoint at iteration 0)
+    │   ├── ...
+    │   ├── probe.pt              (Latest or final probe weights)
+    │   ├── probe_0.pt            (Checkpoint at iteration 0)
+    │   └── ...
+    └── events.out.tfevents.*     (TensorBoard events file)
+```
 """
 
 # Standard
@@ -343,8 +353,6 @@ def run(
     train_df = con.execute(query + f"fold IN ({','.join(training_folds)})").df()
     val_df = con.execute(query + f"fold IN ({','.join(validation_folds)})").df()
 
-    # train_df = pd.read_csv(train_df_path)
-    # val_df = pd.read_csv(val_df_path)
     train_dataset = LabeledSmilesDataset(
         df=train_df,
         property_columns=property_columns,

@@ -1,23 +1,38 @@
 #!/usr/bin/env python
 """
-This script trains an APEX factorizer on a CSL to reconstruct the embeddings of
-an LBM surrogate.
+This script trains an APEX factorizer on a combinatorial synthesis library to
+reconstruct the embeddings of an APEX-compatible surrogate model.
 
-Saves outputs to $OUTPUT_DIR:
-- Config: ${OUTPUT_DIR}/config.yaml
-- Logs: ${OUTPUT_DIR}/logs.log
-- Factorizer weights: ${OUTPUT_DIR}/checkpoints/factorizer_${ITERATION}.pt
-- Final APEX weights: ${OUTPUT_DIR}/checkpoints/apex.pt
-- Tensorboard events file
+Factorizer training can be executed as follows:
+```
+train_factorizer \
+--config configs/apex.yaml \
+--encoder_weights_path $ENCODER_WEIGHTS_PATH \
+--probe_weights_path $PROBE_WEIGHTS_PATH \
+--library_path $CSL_PATH \
+--output_dir $OUTPUT_DIR \
+--run_id $RUN_ID
+```
 
-train_factorizer \\
-  --config configs/apex.yaml \\
-  --encoder_weights_path $ENCODER_WEIGHTS_PATH \\
-  --probe_weights_path $PROBE_WEIGHTS_PATH \\
-  --reaction_df_path $REACTION_DF_PATH \\
-  --synthon_df_path $SYNTHON_DF_PATH \\
-  --output_dir $OUTPUT_DIR \\
-  --run_id $RUN_ID
+Outputs are saved as follows:
+```
+$OUTPUT_DIR/
+└── $RUN_ID/
+    ├── config.yaml               (Provided config)
+    ├── logs.log                  (Log statements)
+    ├── checkpoints/
+    │   ├── encoder.pt            (Provided encoder weights)
+    │   ├── probe.pt              (Provided probe weights)
+    │   ├── factorizer.pt         (Latest or final factorizer weights)
+    │   ├── factorizer_0.pt       (Checkpoint at iteration 0)
+    │   ├── ...
+    │   └── apex.pt               (APEX weights; includes all necessary pre-
+    |                             calculations on the provided CSL to enable
+    |                             accelerated search; only produced at the
+    |                             very end of training, so not available for
+    |                             intermediate iterations)
+    └── events.out.tfevents.*     (TensorBoard events file)
+```
 """
 
 # Standard
@@ -61,6 +76,14 @@ def parse_arguments():
         help="Path to YAML file specifying the configuration.",
     )
     parser.add_argument(
+        "--library_path",
+        type=str,
+        action="store",
+        required=True,
+        help="Path to directory containing the CSL, comprised of a pair of"
+        "reactions.parquet and synthons.parquet files.",
+    )
+    parser.add_argument(
         "--encoder_weights_path",
         type=str,
         action="store",
@@ -73,20 +96,6 @@ def parse_arguments():
         action="store",
         required=True,
         help="Path to weights for probe.",
-    )
-    parser.add_argument(
-        "--reaction_df_path",
-        type=str,
-        action="store",
-        required=True,
-        help="Path to dataframe of reaction SMARTS for the CSL.",
-    )
-    parser.add_argument(
-        "--synthon_df_path",
-        type=str,
-        action="store",
-        required=True,
-        help="Path to dataframe of synthon SMILES for the CSL.",
     )
     parser.add_argument(
         "--factorizer_weights_path",
@@ -278,10 +287,9 @@ def train(
 
 def run(
     config: str,
+    library_path: str,
     encoder_weights_path: str,
     probe_weights_path: str,
-    reaction_df_path: str,
-    synthon_df_path: str,
     factorizer_weights_path: Optional[str] = None,
     load_synthons_and_reactions: bool = True,
     fast_smiles: bool = True,
@@ -312,7 +320,7 @@ def run(
     # Get config parts
     config_vocab = config_all.get("vocabulary", {})
     config_factorizer = config_all.get("factorizer")
-    config_train_apex = config_all.get("train_apex")
+    config_train_factorizer = config_all.get("train_factorizer")
 
     # Register vocab
     Vocabulary.register_atom_vocab(config_vocab.get("atom", None))
@@ -320,8 +328,10 @@ def run(
 
     # Load the CSL
     logging.info("Loading CSLDataset.")
-    reaction_df = pd.read_csv(reaction_df_path)
-    synthon_df = pd.read_csv(synthon_df_path)
+    reaction_df = pd.read_parquet(
+        os.path.join(library_path, "reactions.parquet")
+    )
+    synthon_df = pd.read_parquet(os.path.join(library_path, "synthons.parquet"))
     Vocabulary.register_atom_vocab()
     Vocabulary.register_bond_vocab()
     csl_dataset = CSLDataset(
@@ -359,7 +369,7 @@ def run(
     logging.info(f"Number of factorizer parameters: {num_params:,}.")
 
     # Train factorizer on encoder distillation task
-    train(apex, config_train_apex, outdir)
+    train(apex, config_train_factorizer, outdir)
 
     # Update library tensors
     apex.update_library_tensors()
@@ -375,11 +385,9 @@ def main():
     args = parse_arguments()
     run(
         args.config,
+        args.library_path,
         args.encoder_weights_path,
         args.probe_weights_path,
-        args.reaction_df_path,
-        args.synthon_df_path,
-        args.library_name,
         args.factorizer_weights_path,
         args.load_synthons_and_reactions,
         args.fast_smiles,

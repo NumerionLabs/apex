@@ -21,6 +21,13 @@ def convert_1d_to_2d_indexes(indexes: torch.LongTensor) -> torch.LongTensor:
     )
 
 
+def torch_lexsort(x: torch.Tensor) -> torch.Tensor:
+    assert x.ndim == 2
+    _, inv = torch.unique(x, dim=-1, sorted=True, return_inverse=True)
+    idx = torch.argsort(inv)
+    return x[:, idx]
+
+
 def build_library_indexes(
     libtree: list[list[list[int]]], device: str = "cpu"
 ) -> dict[str, torch.LongTensor]:

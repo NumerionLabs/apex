@@ -135,7 +135,7 @@ class CSLDataset(Dataset):
         assert len(tmp.orig_synthon_id.unique()) == len(tmp)
         orig_synthon_mapper = {
             k: synthon_mapper[v]
-            for k, v in zip(tmp.orig_synthon_id, tmp.synthon_smiles)
+            for k, v in zip(tmp["orig_synthon_id"], tmp["smiles"])
         }
 
         # Retain only specific columns

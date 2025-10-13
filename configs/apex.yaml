@@ -22,17 +22,17 @@ factorizer:
 train_surrogate:
   batch_size: 200
   max_iterations: 50000
-  logging_iterations: 250
+  logging_iterations: 25
   checkpoint_iterations: 1000
   optimizer_name: Adam
   optimizer_kwargs:
     lr: 0.001
 
-train_apex:
+train_factorizer:
   batch_num_products_per_reaction: 300
   batch_num_reactions: 1
   max_iterations: 100000
-  logging_iterations: 250
+  logging_iterations: 25
   optimizer_name: Adam
   optimizer_kwargs:
-    lr: 0.0001
+    lr: 0.001
