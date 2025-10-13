@@ -37,7 +37,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 import yaml
 
-# Atomwise
+# APEX
 from apex.data.atom_bond_features import Vocabulary
 from apex.dataset.labeled_smiles_dataset import LabeledSmilesDataset
 from apex.nn.encoder import LigandEncoder

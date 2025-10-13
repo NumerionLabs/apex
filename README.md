@@ -1,28 +1,9 @@
 # APEX
-*AP*proximate *EX*haustive virtual screening
+Code for [APEX: Approximate-but-exhaustive search for ultra-large combinatorial synthesis libraries]()
 
-* [Link to preprint]()
 
-### Building
-Download CCCL
-```bash
-git clone \
-  -b christinaz/nondeterministic_AIR_topK \
-  https://github.com/ChristinaZ/cccl.git
-```
+### Setup
 
-Build and install the wheel,
-```bash
-python3 setup.py build
-python3 setup.py bdist_wheel
-pip install dist/*.whl
-```
-
-### Testing
-Tests are organized into the [`test`](test) directory.
-```bash
-pytest -v test
-```
-
-## Licence
-TBA
+- Clone and install the [apex_topk](https://github.com/AtomwiseInc/apex_topk) extension module
+- Clone the [apex](https://github.com/AtomwiseInc/apex/) repository
+- `pip install .`

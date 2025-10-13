@@ -36,7 +36,7 @@ from torch import LongTensor, Tensor
 from torch.utils.tensorboard import SummaryWriter
 import yaml
 
-# Atomwise
+# APEX
 from apex.data.atom_bond_features import Vocabulary
 from apex.dataset.csl_dataset import CSLDataset
 from apex.nn.apex import APEXFactorizedCSL, APEXFactorizer

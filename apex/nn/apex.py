@@ -12,8 +12,8 @@ import torch
 from torch import LongTensor, nn, Tensor
 from torch.utils.tensorboard import SummaryWriter
 
-# Atomwise
-from apex import topk
+# APEX
+from apex_topk import topk
 from apex.dataset.csl_dataset import CSLDataset
 from apex.dataset.labeled_smiles_dataset import LabeledSmilesDataset
 from apex.nn.encoder import LigandEncoder
@@ -329,7 +329,6 @@ class APEXFactorizedCSL(nn.Module):
                     library_tree[reaction_id][rgroup_id].append(idx)
         return library_tree
 
-
     @torch.no_grad()
     def run_apex_search(
         self,
@@ -500,7 +499,7 @@ class APEXFactorizedCSL(nn.Module):
 
         mins_elapsed = (time.time() - times[0]) / 60.0
         logger.info(
-            f"Returning Compounds1D with top {k:,} products. Total elapsed "
+            f"Returning dataframe with top {k:,} products. Total elapsed "
             f"time: {mins_elapsed:.2f} minutes."
         )
 

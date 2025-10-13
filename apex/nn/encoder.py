@@ -2,7 +2,7 @@
 import torch
 from torch import nn, Tensor
 
-# Atomwise
+# APEX
 from apex.data.atom_bond_features import Vocabulary
 from apex.data.torch_graph import TorchGraph
 from apex.nn.mpnn import EdgeMessagePassingNetwork

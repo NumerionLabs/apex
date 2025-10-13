@@ -4,7 +4,7 @@ import copy
 # Third party
 import torch
 
-# Atomwise
+# APEX
 from apex.utils.other_utils import flatten_list
 
 

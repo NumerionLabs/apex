@@ -9,7 +9,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-# Atomwise
+# APEX
 from apex.data.atom_bond_features import Vocabulary
 from apex.data.torch_graph import PackedTorchMol, TorchMol
 

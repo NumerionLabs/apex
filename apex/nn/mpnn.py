@@ -2,7 +2,7 @@
 import torch
 from torch import nn
 
-# Atomwise
+# APEX
 import apex.nn.scatter as scatter
 
 

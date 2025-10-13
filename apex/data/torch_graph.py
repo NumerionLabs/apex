@@ -6,7 +6,7 @@ from rdkit import Chem
 import torch
 from torch import LongTensor, Tensor
 
-# Atomwise
+# APEX
 from apex.data.atom_bond_features import (
     get_atom_features,
     get_bond_features,

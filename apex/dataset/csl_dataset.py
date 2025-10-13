@@ -12,7 +12,7 @@ from rdkit.Chem.rdchem import AtomValenceException, KekulizeException
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-# Atomwise
+# APEX
 from apex.data.atom_bond_features import (
     get_sticky_smiles,
     Vocabulary,
