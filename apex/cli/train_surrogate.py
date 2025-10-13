@@ -13,7 +13,7 @@ Saves outputs to $OUTPUT_DIR:
 - Tensorboard events file
 
 train_surrogate \\
---config atomwise/cslvae/configs/apex.yaml \\
+--config configs/apex.yaml \\
 --parquet_path $PARQUET_PATH \\
 --training_folds 0 \\
 --validation_folds 1 \\
@@ -292,7 +292,7 @@ def train(
     writer.close()
 
 
-def main(
+def run(
     config: str,
     parquet_path: str,
     training_folds: list[str],
@@ -392,9 +392,9 @@ def main(
     logging.info(f"Elapsed time: {datetime.now() - start_time}.")
 
 
-if __name__ == "__main__":
+def main():
     args = parse_arguments()
-    main(
+    run(
         args.config,
         args.parquet_path,
         args.training_folds,

@@ -11,7 +11,7 @@ Saves outputs to $OUTPUT_DIR:
 - Tensorboard events file
 
 train_factorizer \\
-  --config atomwise/cslvae/configs/apex.yaml \\
+  --config configs/apex.yaml \\
   --encoder_weights_path $ENCODER_WEIGHTS_PATH \\
   --probe_weights_path $PROBE_WEIGHTS_PATH \\
   --reaction_df_path $REACTION_DF_PATH \\
@@ -276,7 +276,7 @@ def train(
         writer.close()
 
 
-def main(
+def run(
     config: str,
     encoder_weights_path: str,
     probe_weights_path: str,
@@ -371,9 +371,9 @@ def main(
     logging.info(f"Elapsed time: {datetime.now() - start_time}.")
 
 
-if __name__ == "__main__":
+def main():
     args = parse_arguments()
-    main(
+    run(
         args.config,
         args.encoder_weights_path,
         args.probe_weights_path,

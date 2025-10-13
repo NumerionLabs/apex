@@ -1,15 +1,11 @@
-# setup.py
-import os
-from setuptools import find_packages, setup
+# Standard
+# import os
+from setuptools import setup, find_packages
 
 os.environ.setdefault("TORCH_CUDA_ARCH_LIST", "7.5 8.6")
 
 with open("requirements.txt") as f:
-    install_requires = [
-        line.strip()
-        for line in f
-        if line.strip() and not line.startswith("#")
-    ]
+    install_requires = f.read().splitlines()
 
 setup(
     name="apex",
@@ -18,10 +14,12 @@ setup(
     description="APEX source code",
     packages=find_packages(),
     include_package_data=True,
-    scripts=[
-        "bin/train_factorizer.py",
-        "bin/train_surrogate.py",
-    ],
     install_requires=["apex_topk"] + install_requires,
     python_requires=">=3.9",
+    entry_points={
+        "console_scripts": [
+            "train_factorizer=apex.cli.train_factorizer:main",
+            "train_surrogate=apex.cli.train_surrogate:main",
+        ],
+    },
 )
