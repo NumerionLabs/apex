@@ -32,7 +32,7 @@ def build_library_indexes(
     libtree: list[list[list[int]]], device: str = "cpu"
 ) -> dict[str, torch.LongTensor]:
     # Prepare synthons
-    orig_synthons: List[int] = sorted(set(flatten_list(flatten_list(libtree))))
+    orig_synthons: list[int] = sorted(set(flatten_list(flatten_list(libtree))))
 
     synthons_mapper = {k: i for i, k in enumerate(orig_synthons)}
     synthons_mapper_reverse = {i: k for k, i in synthons_mapper.items()}
@@ -44,9 +44,9 @@ def build_library_indexes(
             libtree[i][j] = list(map(lambda k: synthons_mapper[k], jx))
 
     # Form all mapping indexes
-    libtree_1l: List[List[int]] = flatten_list(libtree)
-    libtree_2l: List[int] = flatten_list(libtree_1l)
-    synthons: List[int] = sorted(set(libtree_2l))
+    libtree_1l: list[list[int]] = flatten_list(libtree)
+    libtree_2l: list[int] = flatten_list(libtree_1l)
+    synthons: list[int] = sorted(set(libtree_2l))
 
     orig_synthon_ids = torch.tensor(
         [synthons_mapper_reverse[i] for i in synthons], dtype=torch.long

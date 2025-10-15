@@ -14,6 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 # APEX
 from apex_topk import topk
+from apex.data.atom_bond_features import get_sticky_smiles
 from apex.dataset.csl_dataset import CSLDataset
 from apex.dataset.labeled_smiles_dataset import LabeledSmilesDataset
 from apex.nn.encoder import LigandEncoder
@@ -565,7 +566,7 @@ class APEXFactorizedCSL(nn.Module):
         self.eval()
         device = next(self.factorizer.parameters()).device
 
-        smiles = self.dataset.get_synthons_smiles()
+        smiles = self.dataset.synthon_smiles
         embeds = []
         dataset = LabeledSmilesDataset(pd.DataFrame({"smiles": smiles}))
         dataloader = torch.utils.data.DataLoader(
@@ -573,7 +574,7 @@ class APEXFactorizedCSL(nn.Module):
             batch_size=batch_size,
             shuffle=False,
             collate_fn=dataset.collate_fn,
-            num_workers=num_workers,
+            num_workers=num_workers or os.cpu_count(),
         )
         max_iterations = math.ceil(len(dataset) / batch_size)
         logger.info(

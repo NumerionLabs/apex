@@ -7,7 +7,7 @@ from typing import Optional
 from rdkit import Chem
 from rdkit.Chem.rdchem import Atom, Bond, Mol
 
-STICKY_DICT = {"[U]": "%50", "[Np]": "%51", "[Pu]": "%52", "[Am]": "%53"}
+STICKY_DICT = {"U": 50, "Np": 51, "Pu": 52, "Am": 53}
 ELEMENT_LIST = [
     "H",
     "He",
@@ -128,54 +128,23 @@ ELEMENT_LIST = [
 
 def get_sticky_smiles(smiles: str) -> str:
     """
-    Transforms a synthon SMILES with metallic attachment points into the
-    original string-based "sticky" format with numerical attachment points,
-    which enables faster, string-based construction of products.
+    Transforms a synthon SMILES with metallic attachment points into the string-
+    based "sticky" format with numerical attachment points, which enables fast
+    string-based construction of product SMILES.
     """
-    smiles = Chem.MolToSmiles(Chem.MolFromSmiles(smiles), kekuleSmiles=True)
-    for sticky_symbol in STICKY_DICT.keys():
-        if smiles.startswith(sticky_symbol):
-            # Create a regex pattern to find the first element symbol in the
-            # SMILES
-            element_pattern = "|".join(
-                re.escape(symbol) for symbol in ELEMENT_LIST
+    mol = Chem.MolFromSmiles(smiles)
+    for atom in mol.GetAtoms():
+        if atom.GetSymbol() in STICKY_DICT.keys():
+            v = STICKY_DICT[atom.GetSymbol()]
+            atom.SetAtomicNum(0)
+            atom.SetAtomMapNum(v)
+    sticky_smiles = Chem.MolToSmiles(mol)
+    for k, v in STICKY_DICT.items():
+        if str(v) in sticky_smiles:
+            sticky_smiles = (
+                sticky_smiles.replace(f"[*:{v}]", f"%{v}") + f".[{k}]%{v}"
             )
-            match = re.search(element_pattern, smiles[len(sticky_symbol) :])
-
-            if match:
-                # Get the positions of the sticky symbol and the first
-                # element symbol
-                element_start = match.start() + len(sticky_symbol)
-                element = match.group()
-
-                # Construct the new SMILES by swapping the sticky symbol and
-                # the element symbol
-                smiles = (
-                    element
-                    + smiles[len(sticky_symbol) : element_start]
-                    + sticky_symbol
-                    + smiles[element_start + len(element) :]
-                )
-            continue
-
-    # Replace symbols with placeholders and build suffix
-    suffix_parts = []
-    for symbol, replacement in STICKY_DICT.items():
-        if symbol in smiles:
-            suffix_parts.append(f"[{symbol[1:-1]}]{replacement}")
-            smiles = smiles.replace(symbol, replacement)
-
-            # Remove parentheses around replacements with bond modifiers
-            smiles = re.sub(
-                r"\(([-=#$]?)" + re.escape(replacement) + r"\)",
-                r"\1" + replacement,
-                smiles,
-            )
-
-    # Construct the suffix from replacements
-    suffix = "." + ".".join(suffix_parts) if suffix_parts else ""
-
-    return smiles + suffix
+    return sticky_smiles
 
 
 def _get_return(i, types) -> tuple[int, int]:

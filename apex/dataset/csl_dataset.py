@@ -14,7 +14,6 @@ from torch.utils.data import DataLoader, Dataset
 
 # APEX
 from apex.data.atom_bond_features import (
-    get_sticky_smiles,
     Vocabulary,
 )
 from apex.data.torch_graph import PackedTorchMol, TorchMol
@@ -164,9 +163,6 @@ class CSLDataset(Dataset):
             .drop_duplicates()["smiles"]
             .tolist()
         )
-        self.sticky_synthon_smiles: list[str] = [
-            get_sticky_smiles(smi) for smi in self.synthon_smiles
-        ]
         self._rgroup_counts = [
             [len(x) for x in v] for k, v in enumerate(self.libtree)
         ]
@@ -313,10 +309,7 @@ class CSLDataset(Dataset):
         return ReactionFromSmarts(self.reaction2smarts(reaction_id))
 
     def synthon2smiles(self, synthon_id: int) -> str:
-        if self.fast_smiles:
-            return self.sticky_synthon_smiles[synthon_id]
-        else:
-            return self.synthon_smiles[synthon_id]
+        return self.synthon_smiles[synthon_id]
 
     def synthon2mol(self, synthon_id: int) -> Chem.rdchem.Mol:
         return Chem.MolFromSmiles(self.synthon2smiles(synthon_id))

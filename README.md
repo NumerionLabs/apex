@@ -4,7 +4,7 @@ Code for [APEX: Approximate-but-exhaustive search for ultra-large combinatorial 
 
 ### Setup
 
-First install the [apex_topk](https://github.com/AtomwiseInc/apex_topk) extension module. Then install [apex](https://github.com/AtomwiseInc/apex) as follows:
+First install the [apex_topk](https://github.com/AtomwiseInc/apex_topk) extension module, then install [apex](https://github.com/AtomwiseInc/apex) as follows:
 
 ```
 git clone https://github.com/AtomwiseInc/apex.git
@@ -32,9 +32,16 @@ The data used in the paper can be downloaded [here]() and includes computational
 
 ### Usage
 
+Setting up an APEX model requires a few steps:
+- Train an APEX-compatible surrogate model on a labeled molecular dataset.
+- Train the APEX factorizer to reconstruct embeddings of the trained surrogate model on an unlabeled CSL.
+- Carry out necessary pre-calculations to enable accelerated approximate-but-exhaustive search on a given CSL.
+
+
 #### Train surrogate
 
 ```
+train_surrogate \
 --config configs/apex.yaml \
 --parquet_path ../brics_csl_1M/enumerated_and_scored.parquet \
 --training_folds 0 \
@@ -54,4 +61,16 @@ train_factorizer \
 --library_path ../brics_csl_12M/ \
 --output_dir $OUTPUT_DIR \
 --run_id $FACTORIZER_RUN_ID
+```
+
+#### Prepare a CSL for APEX search
+
+```
+prepare_library \
+--factorizer_weights_path $OUTPUT_DIR/$FACTORIZER_RUN_ID/checkpoints/factorizer.pt \
+--encoder_weights_path $OUTPUT_DIR/$FACTORIZER_RUN_ID/checkpoints/encoder.pt \
+--probe_weights_path $OUTPUT_DIR/$FACTORIZER_RUN_ID/checkpoints/probe.pt \
+--library_path ../brics_csl_12M/ \
+--output_dir $OUTPUT_DIR \
+--run_id $APEX_RUN_ID
 ```

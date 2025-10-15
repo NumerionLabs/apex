@@ -3,7 +3,6 @@
 This script trains a surrogate model on labeled data that it is amenable to APEX
 factorization. The surrogate is decomposed into an encoder and (linear) probes.
 
-Surrogate training can be executed as follows:
 ```
 train_surrogate \
 --config configs/apex.yaml \
@@ -16,19 +15,20 @@ train_surrogate \
 ```
 
 Outputs are saved as follows:
+
 ```
 $OUTPUT_DIR/
 └── $RUN_ID/
     ├── config.yaml               (Provided config)
     ├── logs.log                  (Log statements)
-    ├── checkpoints/
-    │   ├── encoder.pt            (Latest or final encoder weights)
-    │   ├── encoder_0.pt          (Checkpoint at iteration 0)
-    │   ├── ...
-    │   ├── probe.pt              (Latest or final probe weights)
-    │   ├── probe_0.pt            (Checkpoint at iteration 0)
-    │   └── ...
-    └── events.out.tfevents.*     (TensorBoard events file)
+    ├── events.out.tfevents.*     (TensorBoard events file)
+    └── checkpoints/
+        ├── encoder.pt            (Latest or final encoder weights)
+        ├── encoder_0.pt          (Checkpoint at iteration 0)
+        ├── ...
+        ├── probe.pt              (Latest or final probe weights)
+        ├── probe_0.pt            (Checkpoint at iteration 0)
+        └── ...
 ```
 """
 

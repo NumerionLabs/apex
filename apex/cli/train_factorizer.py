@@ -3,35 +3,30 @@
 This script trains an APEX factorizer on a combinatorial synthesis library to
 reconstruct the embeddings of an APEX-compatible surrogate model.
 
-Factorizer training can be executed as follows:
 ```
 train_factorizer \
 --config configs/apex.yaml \
+--library_path $CSL_PATH \
 --encoder_weights_path $ENCODER_WEIGHTS_PATH \
 --probe_weights_path $PROBE_WEIGHTS_PATH \
---library_path $CSL_PATH \
 --output_dir $OUTPUT_DIR \
 --run_id $RUN_ID
 ```
 
 Outputs are saved as follows:
+
 ```
 $OUTPUT_DIR/
 └── $RUN_ID/
     ├── config.yaml               (Provided config)
     ├── logs.log                  (Log statements)
-    ├── checkpoints/
-    │   ├── encoder.pt            (Provided encoder weights)
-    │   ├── probe.pt              (Provided probe weights)
-    │   ├── factorizer.pt         (Latest or final factorizer weights)
-    │   ├── factorizer_0.pt       (Checkpoint at iteration 0)
-    │   ├── ...
-    │   └── apex.pt               (APEX weights; includes all necessary pre-
-    |                             calculations on the provided CSL to enable
-    |                             accelerated search; only produced at the
-    |                             very end of training, so not available for
-    |                             intermediate iterations)
-    └── events.out.tfevents.*     (TensorBoard events file)
+    ├── events.out.tfevents.*     (TensorBoard events file)
+    └── checkpoints/
+        ├── encoder.pt            (Provided encoder weights)
+        ├── probe.pt              (Provided probe weights)
+        ├── factorizer.pt         (Latest or final factorizer weights)
+        ├── factorizer_0.pt       (Checkpoint at iteration 0)
+        └── ...
 ```
 """
 
@@ -267,11 +262,7 @@ def train(
                     )
                 )
                 apex.factorizer.save(
-                    os.path.join(
-                        outdir,
-                        "checkpoints",
-                        "factorizer_latest.pt",
-                    )
+                    os.path.join(outdir, "checkpoints", "factorizer.pt")
                 )
 
         if iteration == max_iterations:
@@ -332,8 +323,6 @@ def run(
         os.path.join(library_path, "reactions.parquet")
     )
     synthon_df = pd.read_parquet(os.path.join(library_path, "synthons.parquet"))
-    Vocabulary.register_atom_vocab()
-    Vocabulary.register_bond_vocab()
     csl_dataset = CSLDataset(
         reaction_df=reaction_df,
         synthon_df=synthon_df,
@@ -371,12 +360,12 @@ def run(
     # Train factorizer on encoder distillation task
     train(apex, config_train_factorizer, outdir)
 
-    # Update library tensors
-    apex.update_library_tensors()
-    torch.save(
-        {"model_state_dict": apex.state_dict()},
-        os.path.join(outdir, "checkpoints", "apex.pt"),
-    )
+    # # Update library tensors
+    # apex.update_library_tensors()
+    # torch.save(
+    #     {"model_state_dict": apex.state_dict()},
+    #     os.path.join(outdir, "checkpoints", "apex.pt"),
+    # )
 
     logging.info(f"Elapsed time: {datetime.now() - start_time}.")
 
