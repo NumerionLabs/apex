@@ -142,8 +142,8 @@ class LinearProbe(nn.Module):
         return yhat
 
     @classmethod
-    def load(cls, path: str) -> "LinearProbe":
-        state_dict = torch.load(path, weights_only=False)
+    def load(cls, path: str, **kwargs) -> "LinearProbe":
+        state_dict = torch.load(path, **kwargs)
         input_dim = state_dict["input_dim"]
         output_names = state_dict["output_names"]
         epsilon = state_dict["epsilon"]

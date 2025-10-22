@@ -16,6 +16,7 @@ setup(
     entry_points={
         "console_scripts": [
             "prepare_library=apex.cli.prepare_library:main",
+            "run_search=apex.cli.run_search:main",
             "train_factorizer=apex.cli.train_factorizer:main",
             "train_surrogate=apex.cli.train_surrogate:main",
         ],

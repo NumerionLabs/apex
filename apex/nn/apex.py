@@ -118,8 +118,8 @@ class APEXFactorizer(nn.Module):
         )
 
     @classmethod
-    def load(cls, path: str) -> "APEXFactorizer":
-        state_dict = torch.load(path, weights_only=False)
+    def load(cls, path: str, **kwargs) -> "APEXFactorizer":
+        state_dict = torch.load(path, **kwargs)
         model = cls(
             embed_dim=state_dict["embed_dim"],
             associative_dim=state_dict["associative_dim"],

@@ -1,0 +1,15 @@
+met_unconstrained_top_100K:
+  k: 100000
+  maximize: false
+  objective: "score_MET"
+  constraints:
+
+met_ro5_top_100K:
+  k: 100000
+  maximize: false
+  objective: "score_MET"
+  constraints:
+    mol_wt: [null, 500.0]
+    n_hbd: [null, 5.5]
+    n_hba: [null, 10.5]
+    logp: [null, 5.0]

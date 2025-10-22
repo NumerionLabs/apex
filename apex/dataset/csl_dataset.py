@@ -63,7 +63,7 @@ class CSLDataset(Dataset):
 
         # Map the original reaction_ids to the internal normalized reaction_ids
         # (which is like range(n_reactions))
-        reaction_df["orig_reaction_id"] = reaction_df["reaction_id"]
+        reaction_df["orig_reaction_id"] = reaction_df["reaction_id"].astype(str)
         orig_reaction_mapper = {
             name: i for i, name in enumerate(reaction_df["reaction_id"])
         }
@@ -73,7 +73,7 @@ class CSLDataset(Dataset):
 
         # Map the original synthon_ids to the internal normalized synthon_ids
         # (which is like range(n_synthons))
-        synthon_df["orig_synthon_id"] = synthon_df["synthon_id"]
+        synthon_df["orig_synthon_id"] = synthon_df["synthon_id"].astype(str)
         synthon_mapper = {
             smi: i
             for i, smi in enumerate(

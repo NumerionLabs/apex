@@ -49,8 +49,8 @@ class LigandEncoder(nn.Module):
         return self.molecule_linear(molecule_feats)
 
     @classmethod
-    def load(cls, path: str) -> "LigandEncoder":
-        state_dict = torch.load(path, weights_only=False)
+    def load(cls, path: str, **kwargs) -> "LigandEncoder":
+        state_dict = torch.load(path, **kwargs)
         embed_dim = state_dict["embed_dim"]
         mpnn_params = state_dict["mpnn_params"]
         model = cls(embed_dim, mpnn_params)

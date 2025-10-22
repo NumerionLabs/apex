@@ -4,27 +4,27 @@ Code for [APEX: Approximate-but-exhaustive search for ultra-large combinatorial 
 
 ### Setup
 
-First install the [apex_topk](https://github.com/AtomwiseInc/apex_topk) extension module, then install [apex](https://github.com/AtomwiseInc/apex) as follows:
+First install the [apex_topk](https://github.com/NumerionLabs/apex_topk) extension module, then install [apex](https://github.com/NumerionLabs/apex) as follows:
 
 ```
-git clone https://github.com/AtomwiseInc/apex.git
+git clone https://github.com/NumerionLabs/apex.git
 cd apex
 pip install .
 ```
 
 ### Datasets
 
-The data used in the paper can be downloaded [here]() and includes computationally labeled combinatorial synthesis libraries (CSLs) with more than 1M (training/validation) and 12M (testing) compounds, along with an unlabeled CSL with more than 10B compounds that can be searched with APEX. The datasets are structued as follows:
+The data used in the paper can be downloaded [here](https://figshare.com/account/articles/30420028) and includes computationally labeled combinatorial synthesis libraries (CSLs) with more than 1M (training/validation) and 12M (testing) compounds, along with an unlabeled CSL with more than 10B compounds that can be searched with APEX. The datasets are structured as follows:
 ```
-.
-├── brics_csl_10B
+brics_csl/
+├── brics_csl_10B/
 │   ├── reactions.parquet
 │   └── synthons.parquet
-├── brics_csl_12M
+├── brics_csl_12M/
 │   ├── enumerated_and_scored.parquet
 │   ├── reactions.parquet
 │   └── synthons.parquet
-└── brics_csl_1M
+└── brics_csl_1M/
     ├── enumerated_and_scored.parquet
     ├── reactions.parquet
     └── synthons.parquet
