@@ -14,7 +14,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 # APEX
 from apex_topk import topk
-from apex.data.atom_bond_features import get_sticky_smiles
 from apex.dataset.csl_dataset import CSLDataset
 from apex.dataset.labeled_smiles_dataset import LabeledSmilesDataset
 from apex.nn.encoder import LigandEncoder
@@ -549,7 +548,6 @@ class APEXFactorizedCSL(nn.Module):
         self,
         batch_size: int = 100,
         logging_iterations: int = 100,
-        num_workers: Optional[int] = None,
     ) -> None:
         """
         This method pre-computes the embeddings for all synthons from the
@@ -560,8 +558,6 @@ class APEXFactorizedCSL(nn.Module):
             batch_size: The batch size specified for the dataloader in
             calculating the synthon embeddings.
             logging_iterations: How often to log progress.
-            num_workers: The number of workers specified for the dataloader in
-            calculating the synthon embeddings.
         """
         self.eval()
         device = next(self.factorizer.parameters()).device
@@ -574,7 +570,6 @@ class APEXFactorizedCSL(nn.Module):
             batch_size=batch_size,
             shuffle=False,
             collate_fn=dataset.collate_fn,
-            num_workers=num_workers or os.cpu_count(),
         )
         max_iterations = math.ceil(len(dataset) / batch_size)
         logger.info(
@@ -585,13 +580,13 @@ class APEXFactorizedCSL(nn.Module):
             synthons = batch.get("mols").to(device)
             embeds.append(self.factorizer.synthon_graph_encoder(synthons))
             if batch_iter % logging_iterations == 0:
-                logger.debug(
+                logger.info(
                     f"Completed iteration {batch_iter}/{max_iterations}."
                 )
         del dataloader, dataset
         embeds = torch.cat(embeds, 0)
         self.library_tensors["synthon_feats"][:] = embeds.to(device)
-        logger.debug("All synthon embeddings have been computed.")
+        logger.info("All synthon embeddings have been computed.")
 
     @torch.no_grad()
     def update_library_tensors(

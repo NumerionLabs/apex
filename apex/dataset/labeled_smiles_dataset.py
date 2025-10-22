@@ -59,9 +59,9 @@ class LabeledSmilesDataset(Dataset):
         try:
             row = self.df.iloc[idx]
             smiles = row[self.smiles_column]
-            mol = TorchMol.from_smiles(row[self.smiles_column])
+            mol = TorchMol.from_smiles(smiles)
             values = torch.tensor(
-                row.loc[self.property_columns].tolist(),
+                row[self.property_columns].tolist(),
                 dtype=torch.float,
             )
             return {"mol": mol, "values": values}

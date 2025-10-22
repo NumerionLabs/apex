@@ -133,17 +133,61 @@ def get_sticky_smiles(smiles: str) -> str:
     string-based construction of product SMILES.
     """
     mol = Chem.MolFromSmiles(smiles)
-    for atom in mol.GetAtoms():
+    if mol is None:
+        raise ValueError(f"Could not parse SMILES: {smiles}")
+
+    rwmol = Chem.RWMol(mol)
+    metals_to_remove = []
+    metal_info = {} # {metal_idx: (neighbor_idx, original_symbol, map_num)}
+
+    # Identify and prepare to replace metal atoms
+    for atom in rwmol.GetAtoms():
         if atom.GetSymbol() in STICKY_DICT.keys():
-            v = STICKY_DICT[atom.GetSymbol()]
-            atom.SetAtomicNum(0)
-            atom.SetAtomMapNum(v)
-    sticky_smiles = Chem.MolToSmiles(mol)
-    for k, v in STICKY_DICT.items():
-        if str(v) in sticky_smiles:
-            sticky_smiles = (
-                sticky_smiles.replace(f"[*:{v}]", f"%{v}") + f".[{k}]%{v}"
-            )
+            metal_idx = atom.GetIdx()
+            map_num = STICKY_DICT[atom.GetSymbol()]
+
+            # Assumes single neighbor
+            neighbor = atom.GetNeighbors()[0]
+            neighbor_idx = neighbor.GetIdx()
+            
+            metals_to_remove.append(metal_idx)
+            metal_info[metal_idx] = (neighbor_idx, atom.GetSymbol(), map_num)
+
+    # Replace metal atoms with attachent points
+    metals_to_remove.sort(reverse=True)
+    for metal_idx in metals_to_remove:
+        neighbor_idx, _, map_num = metal_info[metal_idx]
+        dummy_atom = Chem.Atom(0)
+        dummy_atom.SetAtomMapNum(map_num) 
+        new_dummy_idx = rwmol.AddAtom(dummy_atom)
+        rwmol.AddBond(neighbor_idx, new_dummy_idx, Chem.BondType.SINGLE)
+        rwmol.RemoveAtom(metal_idx)
+
+    mol = rwmol.GetMol()
+    
+    # Generate initial sticky SMILES
+    sticky_smiles = Chem.MolToSmiles(mol, canonical=True, isomericSmiles=True)
+    
+    # Replace metals and form closure
+    for metal_idx in metal_info:
+        _, k, v = metal_info[metal_idx]
+        v_str = str(v)
+
+        # Replace RDKit's explicit placeholder with the marker "%v"
+        replacement_targets = [f"[*:{v_str}]", f"[1*:{v_str}]", f"[{v_str}*]"]
+        
+        for target in replacement_targets:
+            if target in sticky_smiles:
+                sticky_smiles = sticky_smiles.replace(target, f"%{v_str}")
+                break
+        
+        # If RDKit wrapped the placeholder in parentheses, remove them
+        if f"(%{v_str})" in sticky_smiles:
+             sticky_smiles = sticky_smiles.replace(f"(%{v_str})", f"%{v_str}")
+             
+        # Append the closure part
+        sticky_smiles += f".[{k}]%{v}"
+        
     return sticky_smiles
 
 

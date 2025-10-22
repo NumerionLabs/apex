@@ -41,8 +41,6 @@ import uuid
 # Third party
 import pandas as pd
 import torch
-from torch import LongTensor, Tensor
-from torch.utils.tensorboard import SummaryWriter
 import yaml
 
 # APEX
