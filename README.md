@@ -32,13 +32,13 @@ brics_csl/
 
 ### Usage
 
-Setting up an APEX model requires a few steps:
+An APEX model can be set up in a few steps:
 - Train an APEX-compatible surrogate model on a labeled molecular dataset.
-- Train the APEX factorizer to reconstruct embeddings of the trained surrogate model on an unlabeled CSL.
+- Train an APEX factorizer to reconstruct embeddings of the trained surrogate model on an unlabeled CSL.
 - Carry out necessary pre-calculations to enable accelerated approximate-but-exhaustive search on a given CSL.
+- Search!
 
-
-#### Train surrogate
+#### Train the surrogate
 
 ```
 train_surrogate \
@@ -51,26 +51,42 @@ train_surrogate \
 --run_id $SURROGATE_RUN_ID
 ```
 
-#### Train factorizer
+#### Train the factorizer
 
 ```
 train_factorizer \
 --config configs/apex.yaml \
 --encoder_weights_path $OUTPUT_DIR/$SURROGATE_RUN_ID/checkpoints/encoder.pt \
 --probe_weights_path $OUTPUT_DIR/$SURROGATE_RUN_ID/checkpoints/probe.pt \
---library_path ../brics_csl_12M/ \
+--library_path ../brics_csl/brics_csl_12M/ \
 --output_dir $OUTPUT_DIR \
 --run_id $FACTORIZER_RUN_ID
 ```
 
-#### Prepare a CSL for APEX search
+#### Prepare a CSL for search with APEX
 
 ```
 prepare_library \
---factorizer_weights_path $OUTPUT_DIR/$FACTORIZER_RUN_ID/checkpoints/factorizer.pt \
+--config configs/apex.yaml \
 --encoder_weights_path $OUTPUT_DIR/$FACTORIZER_RUN_ID/checkpoints/encoder.pt \
 --probe_weights_path $OUTPUT_DIR/$FACTORIZER_RUN_ID/checkpoints/probe.pt \
---library_path ../brics_csl_12M/ \
+--factorizer_weights_path $OUTPUT_DIR/$FACTORIZER_RUN_ID/checkpoints/factorizer.pt \
+--library_path ../brics_csl/brics_csl_12M/ \
+--output_dir $OUTPUT_DIR \
+--run_id $APEX_RUN_ID
+```
+
+#### Search the CSL with APEX
+
+```
+run_search \
+--config configs/apex.yaml \
+--queries configs/queries.yaml \
+--encoder_weights_path $OUTPUT_DIR/$FACTORIZER_RUN_ID/checkpoints/encoder.pt \
+--probe_weights_path $OUTPUT_DIR/$FACTORIZER_RUN_ID/checkpoints/probe.pt \
+--factorizer_weights_path $OUTPUT_DIR/$FACTORIZER_RUN_ID/checkpoints/factorizer.pt \
+--apex_weights_path $OUTPUT_DIR/$APEX_RUN_ID/checkpoints/apex.pt \
+--library_path ../brics_csl/brics_csl_12M/ \
 --output_dir $OUTPUT_DIR \
 --run_id $APEX_RUN_ID
 ```
