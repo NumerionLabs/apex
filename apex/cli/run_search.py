@@ -168,7 +168,7 @@ def run(
     outdir = os.path.join(output_dir, run_id)
     makedirs(os.path.join(outdir))
     shutil.copy(config, os.path.join(outdir, "config.yaml"))
-    shutil.copy(config, os.path.join(outdir, "queries.yaml"))
+    shutil.copy(queries, os.path.join(outdir, "queries.yaml"))
 
     # Set up logging
     init_logging(filename=os.path.join(outdir, "logs.log"))

@@ -7,7 +7,7 @@ with open("requirements.txt") as f:
 setup(
     name="apex",
     version="1.0.0",
-    author="Atomwise",
+    author="Numerion Labs",
     description="APEX source code",
     packages=find_packages(),
     include_package_data=True,

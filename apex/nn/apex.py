@@ -509,6 +509,7 @@ class APEXFactorizedCSL(nn.Module):
         self,
         synthon_feats: Tensor,
         library_indexes: dict[str, LongTensor],
+        calculate_contributions: bool = False,
     ) -> dict[str, Tensor]:
         # Move synthon features to same device as CSLVAE
         device = next(self.parameters()).device
@@ -541,6 +542,13 @@ class APEXFactorizedCSL(nn.Module):
                 library_indexes,
             )
         )
+        if calculate_contributions:
+            library_tensors["synthon_associative_contribs"] = (
+                self.calculate_synthon_associative_contribs(
+                    library_tensors,
+                    library_indexes,
+                )
+            )
         return library_tensors
 
     @torch.no_grad()
@@ -617,6 +625,7 @@ class APEXFactorizedCSL(nn.Module):
         library_tensors = self.encode_library(
             synthon_feats=self.library_tensors["synthon_feats"],
             library_indexes=self.library_indexes,
+            calculate_contributions=(self.probe is not None),
         )
         self.library_tensors["rgroup_feats"][:] = library_tensors[
             "rgroup_feats"
@@ -627,6 +636,10 @@ class APEXFactorizedCSL(nn.Module):
         self.library_tensors["synthon_associative_embeds"][:] = library_tensors[
             "synthon_associative_embeds"
         ].to(device)
+        if self.probe is not None:
+            self.library_tensors["synthon_associative_contribs"][:] = (
+                library_tensors["synthon_associative_contribs"].to(device)
+            )
         del library_tensors
         end_time = time.time()
         mins_elapsed = (end_time - start_time) / 60.0
