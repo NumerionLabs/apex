@@ -306,7 +306,11 @@ class APEXFactorizedCSL(nn.Module):
 
         return torch.cat(synthon_associative_embeds, 0)
 
-    def calculate_synthon_associative_contribs(self, library_tensors):
+    def calculate_synthon_associative_contribs(
+        self,
+        library_tensors,
+        library_indexes,
+    ):
         scaled_weight = self.probe.weight.T / self.probe.output_scale
         synthon_associative_embeds = library_tensors[
             "synthon_associative_embeds"
