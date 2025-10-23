@@ -1,13 +1,77 @@
-met_unconstrained_top_100K:
+min_score_DRD2_st_unconstrained_top100K:
+  k: 100000
+  maximize: false
+  objective: score_DRD2
+  constraints:
+
+min_score_DRD2_st_ro5_top100K:
+  k: 100000
+  maximize: false
+  objective: score_DRD2
+  constraints:
+    mol_wt: [null, 500.0]
+    n_hbd: [null, 5.5]
+    n_hba: [null, 10.5]
+    logp: [null, 5.0]
+
+min_score_ESR1_st_unconstrained_top100K:
+  k: 100000
+  maximize: false
+  objective: score_ESR1
+  constraints:
+
+min_score_ESR1_st_ro5_top100K:
+  k: 100000
+  maximize: false
+  objective: score_ESR1
+  constraints:
+    mol_wt: [null, 500.0]
+    n_hbd: [null, 5.5]
+    n_hba: [null, 10.5]
+    logp: [null, 5.0]
+
+min_score_F10_st_unconstrained_top100K:
+  k: 100000
+  maximize: false
+  objective: score_F10
+  constraints:
+
+min_score_F10_st_ro5_top100K:
+  k: 100000
+  maximize: false
+  objective: score_F10
+  constraints:
+    mol_wt: [null, 500.0]
+    n_hbd: [null, 5.5]
+    n_hba: [null, 10.5]
+    logp: [null, 5.0]
+
+min_score_MET_st_unconstrained_top100K:
   k: 100000
   maximize: false
   objective: score_MET
   constraints:
 
-met_ro5_top_100K:
+min_score_MET_st_ro5_top100K:
   k: 100000
   maximize: false
   objective: score_MET
+  constraints:
+    mol_wt: [null, 500.0]
+    n_hbd: [null, 5.5]
+    n_hba: [null, 10.5]
+    logp: [null, 5.0]
+
+min_score_PARP1_st_unconstrained_top100K:
+  k: 100000
+  maximize: false
+  objective: score_PARP1
+  constraints:
+
+min_score_PARP1_st_ro5_top100K:
+  k: 100000
+  maximize: false
+  objective: score_PARP1
   constraints:
     mol_wt: [null, 500.0]
     n_hbd: [null, 5.5]

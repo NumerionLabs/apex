@@ -1,5 +1,5 @@
 # APEX
-Code for [APEX: Approximate-but-exhaustive search for ultra-large combinatorial synthesis libraries]()
+Code for the paper [APEX: Approximate-but-exhaustive search for ultra-large combinatorial synthesis libraries]().
 
 
 ### Setup
@@ -14,7 +14,7 @@ pip install .
 
 ### Datasets
 
-The data used in the paper can be downloaded [here](https://figshare.com/account/articles/30420028) and includes computationally labeled combinatorial synthesis libraries (CSLs) with more than 1M (training/validation) and 12M (testing) compounds, along with an unlabeled CSL with more than 10B compounds that can be searched with APEX. The datasets are structured as follows:
+The data used in the paper can be downloaded [here](https://figshare.com/account/articles/30420028) and includes computationally labeled combinatorial synthesis libraries (CSLs) with more than 1M (training/validation) and 12M (testing) compounds, along with an unlabeled CSL with more than 10B compounds that can be searched with APEX. The data are structured as follows:
 ```
 brics_csl/
 ├── brics_csl_10B/
@@ -33,12 +33,14 @@ brics_csl/
 ### Usage
 
 An APEX model can be set up in a few steps:
-- Train an APEX-compatible surrogate model on a labeled molecular dataset.
-- Train an APEX factorizer to reconstruct embeddings of the trained surrogate model on an unlabeled CSL.
-- Carry out necessary pre-calculations to enable accelerated approximate-but-exhaustive search on a given CSL.
-- Search!
+1. Train an APEX-compatible surrogate model (comprised of a molecular encoder and linear probes) on a labeled molecular dataset.
+2. Train an APEX factorizer to reconstruct embeddings of the trained surrogate model on an unlabeled CSL.
+3. Carry out necessary pre-calculations to enable accelerated approximate-but-exhaustive search on a given CSL.
+4. Search!
 
-#### Train the surrogate
+In the paper, we (1) train a simple 2D GNN surrogate model on 70% of the `brics_csl_1M` library, (2) train a factorizer on the `brics_csl_12M` and `brics_csl_10B` libraries, and (3) carried out necessary pre-calculations for carrying out an APEX search. The resulting model weights can be downloaded [here]() and can be readily used to search the `brics_csl_12M` and `brics_csl_10B` libraries (4).
+
+#### 1. Train the surrogate
 
 ```
 train_surrogate \
@@ -51,7 +53,7 @@ train_surrogate \
 --run_id $SURROGATE_RUN_ID
 ```
 
-#### Train the factorizer
+#### 2. Train the factorizer
 
 ```
 train_factorizer \
@@ -63,7 +65,7 @@ train_factorizer \
 --run_id $FACTORIZER_RUN_ID
 ```
 
-#### Prepare a CSL for search with APEX
+#### 3. Prepare a CSL for search with APEX
 
 ```
 prepare_library \
@@ -76,7 +78,7 @@ prepare_library \
 --run_id $APEX_RUN_ID
 ```
 
-#### Search the CSL with APEX
+#### 4. Search the CSL with APEX
 
 ```
 run_search \
@@ -88,5 +90,5 @@ run_search \
 --apex_weights_path $OUTPUT_DIR/$APEX_RUN_ID/checkpoints/apex.pt \
 --library_path ../brics_csl/brics_csl_12M/ \
 --output_dir $OUTPUT_DIR \
---run_id $APEX_RUN_ID
+--run_id $SEARCH_RUN_ID
 ```
