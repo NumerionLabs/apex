@@ -464,9 +464,9 @@ class APEXFactorizedCSL(nn.Module):
         ]
 
         times += [time.time()]
-        mins_elapsed = (times[-1] - times[-2]) / 60.0
+        time_elapsed = times[-1] - times[-2]
         logger.info(
-            f"Screening complete in {mins_elapsed:.2f} minutes. Converting top "
+            f"Screening complete in {time_elapsed:.2f} seconds. Converting top "
             f"{k:,} compounds to SMILES."
         )
 
@@ -485,10 +485,10 @@ class APEXFactorizedCSL(nn.Module):
             apex_constr_value_list.append(apex_constr_values[i])
 
         times += [time.time()]
-        mins_elapsed = (times[-1] - times[-2]) / 60.0
+        time_elapsed = times[-1] - times[-2]
         logger.info(
             f"All {k:,} products have been converted to SMILES in "
-            f"{mins_elapsed:.2f} minutes."
+            f"{time_elapsed:.2f} seconds."
         )
 
         # Construct output dataframe
@@ -501,10 +501,10 @@ class APEXFactorizedCSL(nn.Module):
             }
         )
 
-        mins_elapsed = (time.time() - times[0]) / 60.0
+        time_elapsed = time.time() - times[0]
         logger.info(
             f"Returning dataframe with top {k:,} products. Total elapsed "
-            f"time: {mins_elapsed:.2f} minutes."
+            f"time: {time_elapsed:.2f} seconds."
         )
 
         return df

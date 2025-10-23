@@ -231,7 +231,8 @@ def run(
         queries = yaml.safe_load(fp)
 
     # Run APEX search for each query
-    for name, query in queries.items():
+    for i, (name, query) in enumerate(queries.items()):
+        logging.info(f"===== Query {i}/{len(queries)}: {name} =====")
         result_df = apex.run_apex_search(**query)
         result_df.to_csv(os.path.join(outdir, str(name) + ".csv"), index=False)
 
