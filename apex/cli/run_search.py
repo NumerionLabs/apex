@@ -23,9 +23,9 @@ $OUTPUT_DIR/
     ├── config.yaml               (Provided config)
     ├── queries.yaml              (Provided queries)
     ├── logs.log                  (Log statements)
-    ├── {query_0}.df              (Result of APEX search for first query)
+    ├── {query_0}.csv             (Result of APEX search for first query)
     ├── ...
-    └── {query_n}.df              (Result of APEX search for last query)
+    └── {query_n}.csv             (Result of APEX search for last query)
 ```
 """
 
