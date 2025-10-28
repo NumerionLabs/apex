@@ -25,7 +25,7 @@ $OUTPUT_DIR/
     ├── logs.log                  (Log statements)
     ├── {query_0}.df              (Result of APEX search for first query)
     ├── ...
-    └── {query_n}.log             (Result of APEX search for last query)
+    └── {query_n}.df              (Result of APEX search for last query)
 ```
 """
 
