@@ -1,5 +1,5 @@
 # APEX
-Code for the paper [APEX: Approximate-but-exhaustive search for ultra-large combinatorial synthesis libraries]().
+Code for the paper [APEX: Approximate-but-exhaustive search for ultra-large combinatorial synthesis libraries](https://arxiv.org/abs/2510.24380).
 
 
 ### Setup
